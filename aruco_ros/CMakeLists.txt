@@ -42,6 +42,10 @@ add_executable(marker_publisher src/marker_publish.cpp
 add_dependencies(marker_publisher ${PROJECT_NAME}_gencfg)
 target_link_libraries(marker_publisher ${catkin_LIBRARIES})
 
+add_executable(marker_generator src/marker_generator.cpp)
+add_dependencies(marker_generator ${PROJECT_NAME}_gencfg)
+target_link_libraries(marker_generator ${catkin_LIBRARIES})
+
 #############
 ## Install ##
 #############
