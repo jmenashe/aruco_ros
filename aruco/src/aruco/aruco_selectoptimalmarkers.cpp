@@ -36,6 +36,7 @@ or implied, of Rafael Muñoz Salinas.
 #include <aruco/aruco.h>
 #include <iostream>
 #include <aruco/arucofidmarkers.h>
+#include <limits>
 using namespace cv;
 using namespace std;
 

@@ -62,7 +62,7 @@ public:
     * Note that : The first bit, is the inverse of the hamming parity. This avoids the 0 0 0 0 0 to be valid
     * These marker are detected by the function  getFiduciadlMarker_Aruco_Type1
     */
-    static cv::Mat createMarkerImage(int id,int size) throw (cv::Exception);
+    static cv::Mat createMarkerImage(int id,int size,int gsize=5) throw (cv::Exception);
 
     /** Detection of fiducidal aruco markers (10 bits)
      * @param in input image with the patch that contains the possible marker
@@ -73,7 +73,7 @@ public:
 
     /**Similar to createMarkerImage. Instead of returning a visible image, returns a 8UC1 matrix of 0s and 1s with the marker info
      */
-    static cv::Mat getMarkerMat(int id) throw (cv::Exception);
+    static cv::Mat getMarkerMat(int id, int gsize=5) throw (cv::Exception);
 
 
     /**Creates a printable image of a board
@@ -109,8 +109,8 @@ private:
   
     static vector<int> getListOfValidMarkersIds_random(int nMarkers,vector<int> *excluded) throw (cv::Exception);
     static  cv::Mat rotate(const cv::Mat & in);
-    static  int hammDistMarker(cv::Mat  bits);
-    static  int analyzeMarkerImage(cv::Mat &grey,int &nRotations);
+    static  int hammDistMarker(cv::Mat  bits, int gsize=5);
+    static  int analyzeMarkerImage(cv::Mat &grey,int &nRotations, int gsize=5);
 };
 
 }

@@ -41,20 +41,21 @@ namespace aruco {
  ************************************/
   /**
 */
-  Mat FiducidalMarkers::createMarkerImage(int id,int size) throw (cv::Exception)
+  Mat FiducidalMarkers::createMarkerImage(int id,int size,int gsize) throw (cv::Exception)
   {
     Mat marker(size,size, CV_8UC1);
     marker.setTo(Scalar(0));
+    int bsize = gsize + 2;
     if (0<=id && id<1024) {
       //for each line, create
-      int swidth=size/7;
+      int swidth=size/bsize;
       int ids[4]={0x10,0x17,0x09,0x0e};
-      for (int y=0;y<5;y++) {
-        int index=(id>>2*(4-y)) & 0x0003;
+      for (int y=0;y<gsize;y++) {
+        int index=(id>>2*(gsize-1-y)) & 0x0003;
         int val=ids[index];
-        for (int x=0;x<5;x++) {
+        for (int x=0;x<gsize;x++) {
           Mat roi=marker(Rect((x+1)* swidth,(y+1)* swidth,swidth,swidth));
-          if ( ( val>>(4-x) ) & 0x0001 ) roi.setTo(Scalar(255));
+          if ( ( val>>(gsize-1-x) ) & 0x0001 ) roi.setTo(Scalar(255));
           else roi.setTo(Scalar(0));
         }
       }
@@ -66,18 +67,18 @@ namespace aruco {
   /**
  *
  */
-  cv::Mat FiducidalMarkers::getMarkerMat(int id) throw (cv::Exception)
+  cv::Mat FiducidalMarkers::getMarkerMat(int id,int gsize) throw (cv::Exception)
   {
-    Mat marker(5,5, CV_8UC1);
+    Mat marker(gsize,gsize, CV_8UC1);
     marker.setTo(Scalar(0));
     if (0<=id && id<1024) {
       //for each line, create
       int ids[4]={0x10,0x17,0x09,0x0e};
-      for (int y=0;y<5;y++) {
-        int index=(id>>2*(4-y)) & 0x0003;
+      for (int y=0;y<gsize;y++) {
+        int index=(id>>2*(gsize-1-y)) & 0x0003;
         int val=ids[index];
-        for (int x=0;x<5;x++) {
-          if ( ( val>>(4-x) ) & 0x0001 ) marker.at<uchar>(y,x)=1;
+        for (int x=0;x<gsize;x++) {
+          if ( ( val>>(gsize-1-x) ) & 0x0001 ) marker.at<uchar>(y,x)=1;
           else marker.at<uchar>(y,x)=0;
         }
       }
@@ -266,7 +267,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducidalMarkers::hammDistMarker(Mat  bits)
+  int FiducidalMarkers::hammDistMarker(Mat  bits, int gsize)
   {
     int ids[4][5]=
     {
@@ -288,7 +289,7 @@ namespace aruco {
     };
     int dist=0;
 
-    for (int y=0;y<5;y++)
+    for (int y=0;y<gsize;y++)
     {
       int minSum=1e5;
       //hamming distance to each possible word
@@ -296,7 +297,7 @@ namespace aruco {
       {
         int sum=0;
         //now, count
-        for (int x=0;x<5;x++)
+        for (int x=0;x<gsize;x++)
           sum+=  bits.at<uchar>(y,x) == ids[p][x]?0:1;
         if (minSum>sum) minSum=sum;
       }
@@ -313,18 +314,19 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducidalMarkers::analyzeMarkerImage(Mat &grey,int &nRotations)
+  int FiducidalMarkers::analyzeMarkerImage(Mat &grey,int &nRotations, int gsize)
   {
-
-    //Markers  are divided in 7x7 regions, of which the inner 5x5 belongs to marker info
+    //G == gsize, B = bsize
+    //Markers  are divided in BxB regions, of which the inner GxG belongs to marker info
     //the external border shoould be entirely black
 
-    int swidth=grey.rows/7;
-    for (int y=0;y<7;y++)
+    int bsize = gsize + 2;
+    int swidth=grey.rows/bsize;
+    for (int y=0;y<bsize;y++)
     {
-      int inc=6;
-      if (y==0 || y==6) inc=1;//for first and last row, check the whole border
-      for (int x=0;x<7;x+=inc)
+      int inc=bsize - 1;
+      if (y==0 || y==bsize-1) inc=1;//for first and last row, check the whole border
+      for (int x=0;x<bsize;x+=inc)
       {
         int Xstart=(x)*(swidth);
         int Ystart=(y)*(swidth);
@@ -338,14 +340,14 @@ namespace aruco {
     }
 
     //now,
-    vector<int> markerInfo(5);
-    Mat _bits=Mat::zeros(5,5,CV_8UC1);
+    vector<int> markerInfo(gsize);
+    Mat _bits=Mat::zeros(gsize,gsize,CV_8UC1);
     //get information(for each inner square, determine if it is  black or white)
 
-    for (int y=0;y<5;y++)
+    for (int y=0;y<gsize;y++)
     {
 
-      for (int x=0;x<5;x++)
+      for (int x=0;x<gsize;x++)
       {
         int Xstart=(x+1)*(swidth);
         int Ystart=(y+1)*(swidth);
@@ -384,7 +386,7 @@ namespace aruco {
     else {//Get id of the marker
       int MatID=0;
       cv::Mat bits=Rotations [ minDist.second];
-      for (int y=0;y<5;y++)
+      for (int y=0;y<gsize;y++)
       {
         MatID<<=1;
         if ( bits.at<uchar>(y,1)) MatID|=1;
