@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     std::stringstream spath;
     spath << directory << i << ".png";
     std::string path = spath.str();
-    cv::Mat image = aruco::FiducidalMarkers::createMarkerImage(i, 100, 3);
+    cv::Mat image = aruco::FiducialMarkers::createMarkerImage(i, 100, 3);
     cv::imwrite(path, image);
   }
 }

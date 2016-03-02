@@ -52,7 +52,7 @@ namespace aruco
     _cornerMethod=LINES;
     _markerWarpSize=56;
     _speed=0;
-    markerIdDetector_ptrfunc=aruco::FiducidalMarkers::detect;
+    markerIdDetector_ptrfunc=aruco::FiducialMarkers::detect;
     pyrdown_level=0; // no image reduction
     _minSize=0.04;
     _maxSize=0.5;

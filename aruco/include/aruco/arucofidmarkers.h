@@ -34,7 +34,7 @@ or implied, of Rafael Muñoz Salinas.
 #include <aruco/board.h>
 namespace aruco {
 
-class ARUCO_EXPORTS FiducidalMarkers {
+class ARUCO_EXPORTS FiducialMarkers {
 public:
     /**
     * \brief Creates an ar marker with the id specified using a modified version of the hamming code.

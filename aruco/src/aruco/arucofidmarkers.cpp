@@ -41,7 +41,7 @@ namespace aruco {
  ************************************/
   /**
 */
-  Mat FiducidalMarkers::createMarkerImage(int id,int size,int gsize) throw (cv::Exception)
+  Mat FiducialMarkers::createMarkerImage(int id,int size,int gsize) throw (cv::Exception)
   {
     Mat marker(size,size, CV_8UC1);
     marker.setTo(Scalar(0));
@@ -67,7 +67,7 @@ namespace aruco {
   /**
  *
  */
-  cv::Mat FiducidalMarkers::getMarkerMat(int id,int gsize) throw (cv::Exception)
+  cv::Mat FiducialMarkers::getMarkerMat(int id,int gsize) throw (cv::Exception)
   {
     Mat marker(gsize,gsize, CV_8UC1);
     marker.setTo(Scalar(0));
@@ -93,7 +93,7 @@ namespace aruco {
  *
  ************************************/
 
-  cv::Mat  FiducidalMarkers::createBoardImage( Size gridSize,int MarkerSize,int MarkerDistance,  BoardConfiguration& TInfo  ,vector<int> *excludedIds) throw (cv::Exception)
+  cv::Mat  FiducialMarkers::createBoardImage( Size gridSize,int MarkerSize,int MarkerDistance,  BoardConfiguration& TInfo  ,vector<int> *excludedIds) throw (cv::Exception)
   {
 
 
@@ -139,7 +139,7 @@ namespace aruco {
  *
  *
  ************************************/
-  cv::Mat  FiducidalMarkers::createBoardImage_ChessBoard( Size gridSize,int MarkerSize,  BoardConfiguration& TInfo ,bool centerData ,vector<int> *excludedIds) throw (cv::Exception)
+  cv::Mat  FiducialMarkers::createBoardImage_ChessBoard( Size gridSize,int MarkerSize,  BoardConfiguration& TInfo ,bool centerData ,vector<int> *excludedIds) throw (cv::Exception)
   {
 
 
@@ -168,7 +168,7 @@ namespace aruco {
       for (int x=0;x<gridSize.width;x++) {
         toWrite=!toWrite;
         if (toWrite) {
-          if (CurMarkerIdx>=idsVector.size()) throw cv::Exception(999," FiducidalMarkers::createBoardImage_ChessBoard","INTERNAL ERROR. REWRITE THIS!!",__FILE__,__LINE__);
+          if (CurMarkerIdx>=idsVector.size()) throw cv::Exception(999," FiducialMarkers::createBoardImage_ChessBoard","INTERNAL ERROR. REWRITE THIS!!",__FILE__,__LINE__);
           TInfo.push_back( MarkerInfo(idsVector[CurMarkerIdx++]));
 
           Mat subrect(tableImage,Rect( x*MarkerSize,y*MarkerSize,MarkerSize,MarkerSize));
@@ -199,7 +199,7 @@ namespace aruco {
  *
  *
  ************************************/
-  cv::Mat  FiducidalMarkers::createBoardImage_Frame( Size gridSize,int MarkerSize,int MarkerDistance, BoardConfiguration& TInfo ,bool centerData,vector<int> *excludedIds ) throw (cv::Exception)
+  cv::Mat  FiducialMarkers::createBoardImage_Frame( Size gridSize,int MarkerSize,int MarkerDistance, BoardConfiguration& TInfo ,bool centerData,vector<int> *excludedIds ) throw (cv::Exception)
   {
     srand(cv::getTickCount());
     int nMarkers=2*gridSize.height*2*gridSize.width;
@@ -246,7 +246,7 @@ namespace aruco {
  *
  *
  ************************************/
-  Mat FiducidalMarkers::rotate(const Mat  &in)
+  Mat FiducialMarkers::rotate(const Mat  &in)
   {
     Mat out;
     in.copyTo(out);
@@ -267,7 +267,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducidalMarkers::hammDistMarker(Mat  bits, int gsize)
+  int FiducialMarkers::hammDistMarker(Mat  bits, int gsize)
   {
     int ids[4][5]=
     {
@@ -314,7 +314,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducidalMarkers::analyzeMarkerImage(Mat &grey,int &nRotations, int gsize)
+  int FiducialMarkers::analyzeMarkerImage(Mat &grey,int &nRotations, int gsize)
   {
     //G == gsize, B = bsize
     //Markers  are divided in BxB regions, of which the inner GxG belongs to marker info
@@ -404,7 +404,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducidalMarkers::detect(const Mat &in,int &nRotations)
+  int FiducialMarkers::detect(const Mat &in,int &nRotations)
   {
     assert(in.rows==in.cols);
     Mat grey;
@@ -425,11 +425,11 @@ namespace aruco {
         return -1;*/
   }
 
-  vector<int> FiducidalMarkers::getListOfValidMarkersIds_random(int nMarkers,vector<int> *excluded) throw (cv::Exception)
+  vector<int> FiducialMarkers::getListOfValidMarkersIds_random(int nMarkers,vector<int> *excluded) throw (cv::Exception)
   {
 
     if (excluded!=NULL)
-      if (nMarkers+excluded->size()>1024) throw cv::Exception(8888,"FiducidalMarkers::getListOfValidMarkersIds_random","Number of possible markers is exceeded",__FILE__,__LINE__);
+      if (nMarkers+excluded->size()>1024) throw cv::Exception(8888,"FiducialMarkers::getListOfValidMarkersIds_random","Number of possible markers is exceeded",__FILE__,__LINE__);
 
     vector<int> listOfMarkers(1024);
     //set a list with all ids

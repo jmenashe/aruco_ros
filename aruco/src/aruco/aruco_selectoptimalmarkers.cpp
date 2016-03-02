@@ -115,8 +115,8 @@ int main(int argc,char **argv)
         vector<cv::Mat> markers;
 	vector<int> ventropy;
         for (int i=0;i<1024;i++){
-            markers.push_back(aruco::FiducidalMarkers::getMarkerMat(i) );
- 	    ventropy.push_back(entropy( aruco::FiducidalMarkers::getMarkerMat(i) ));
+            markers.push_back(aruco::FiducialMarkers::getMarkerMat(i) );
+ 	    ventropy.push_back(entropy( aruco::FiducialMarkers::getMarkerMat(i) ));
 	}
 	  cout<<"Calculating distance matrix"<<endl;
         //create a matrix with all distances
@@ -178,7 +178,7 @@ int main(int argc,char **argv)
 	  sprintf(name,"%s%d.png",argv[2],selectedMarkers[i]);
 // 	  cout<<"name="<<name<<endl;
 	  cout<<selectedMarkers[i]<<" "<<flush;
-	  Mat markerImage=aruco::FiducidalMarkers::createMarkerImage(selectedMarkers[i],atoi(argv[3]));
+	  Mat markerImage=aruco::FiducialMarkers::createMarkerImage(selectedMarkers[i],atoi(argv[3]));
 	  imwrite(name,markerImage);
 	}
 	cout<<endl;
