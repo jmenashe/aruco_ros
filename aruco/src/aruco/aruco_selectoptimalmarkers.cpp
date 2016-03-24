@@ -40,12 +40,12 @@
 using namespace cv;
 using namespace std;
 
-int HammDist_(const cv::Mat &m1,const cv::Mat & m2)
+int HammDist_(const cv::Mat &m1,const cv::Mat & m2, int gsize)
 {
 
   int dist=0;
-  for (int y=0;y<5;y++)
-    for (int x=0;x<5;x++)
+  for (int y=0;y<gsize;y++)
+    for (int x=0;x<gsize;x++)
       if (m1.at<uchar>(y,x)!=m2.at<uchar>(y,x)) dist++;
   return dist;
 
@@ -65,12 +65,12 @@ Mat rotate(Mat  in)
 }
 
 
-int HammDist(const cv::Mat &m1,const cv::Mat & m2)
+int HammDist(const cv::Mat &m1,const cv::Mat & m2, int gsize)
 {
   cv::Mat mc=m1.clone();
   int minD=std::numeric_limits<int>::max();
   for(int i=0;i<4;i++){
-    int dist=HammDist_(mc,m2);
+    int dist=HammDist_(mc,m2,gsize);
     if( dist<minD) minD=dist;
     mc= rotate(mc);
   }
@@ -78,17 +78,17 @@ int HammDist(const cv::Mat &m1,const cv::Mat & m2)
 
 }
 
-int entropy(const cv::Mat &marker)
+int entropy(const cv::Mat &marker, int gsize)
 {
 
   //the entropy is calcualte for each bin as the number of elements different from it in its sourroundings
   int totalEntropy=0;
-  for (int y=0;y<5;y++)
-    for (int x=0;x<5;x++){
+  for (int y=0;y<gsize;y++)
+    for (int x=0;x<gsize;x++){
       int minX=max(x-1,0);
-      int maxX=min(x+1,5);
+      int maxX=min(x+1,gsize);
       int minY=max(y-1,0);
-      int maxY=min(y+1,5);
+      int maxY=min(y+1,gsize);
 
       for(int yy=minY;yy<maxY;yy++)
         for(int xx=minX;xx<maxX;xx++)
@@ -101,6 +101,8 @@ int entropy(const cv::Mat &marker)
 int main(int argc,char **argv)
 {
   try {
+    int GSIZE = 3;
+    int MAX_ID = min(1024, 1 << GSIZE * GSIZE);
     if (argc<4) {
 
       //You can also use ids 2000-2007 but it is not safe since there are a lot of false positives.
@@ -114,21 +116,21 @@ int main(int argc,char **argv)
     if(argc>=5) minimimEntropy=atoi(argv[4]);
     vector<cv::Mat> markers;
     vector<int> ventropy;
-    for (int i=0;i<1024;i++){
-      markers.push_back(aruco::FiducialMarkers::getMarkerMat(i) );
-      ventropy.push_back(entropy( aruco::FiducialMarkers::getMarkerMat(i) ));
+    for (int i=0;i<MAX_ID;i++){
+      markers.push_back(aruco::FiducialMarkers::getMarkerMat(i, GSIZE));
+      ventropy.push_back(entropy(aruco::FiducialMarkers::getMarkerMat(i, GSIZE), GSIZE));
     }
     cout<<"Calculating distance matrix"<<endl;
     //create a matrix with all distances
-    cv::Mat distances=cv::Mat::zeros(1024,1024,CV_32SC1);
-    for (int i=0;i<1024;i++)
-      for (int j=i+1;j<1024;j++)
-        distances.at<int>(i,j)=distances.at<int>(j,i)= HammDist (  markers[i],markers[j]);
+    cv::Mat distances=cv::Mat::zeros(MAX_ID,MAX_ID,CV_32SC1);
+    for (int i=0;i<MAX_ID;i++)
+      for (int j=i+1;j<MAX_ID;j++)
+        distances.at<int>(i,j)=distances.at<int>(j,i) = HammDist(markers[i], markers[j], GSIZE);
     cout<<"done"<<endl;
     //
     int nMarkers=atoi(argv[1]);
     //select the first marker
-    vector<bool> usedMarkers(1024,false);
+    vector<bool> usedMarkers(MAX_ID,false);
 
 
 
@@ -145,7 +147,7 @@ int main(int argc,char **argv)
     for(size_t i=0;i<ventropy.size();i++)
       if (ventropy[i]<minimimEntropy) usedMarkers[i]=true;
 
-    cout<<"Max Entroy in ="<<bestEntr<<" "<<ventropy[bestEntr]<<endl;
+    cout<<"Max Entropy in ="<<bestEntr<<" "<<ventropy[bestEntr]<<endl;
     //add new markers according to the distance added to the global
     for (int i=1;i<nMarkers;i++) {
       int bestMarker=-1;
@@ -155,7 +157,8 @@ int main(int argc,char **argv)
         if (!usedMarkers[j]) {
           int minDist=std::numeric_limits< int >::max();
           for (size_t k=0;k<selectedMarkers.size();k++)
-            if (distances.at<int> ( selectedMarkers[k], j)<minDist) minDist=distances.at<int> ( selectedMarkers[k], j);
+            if (distances.at<int>(selectedMarkers[k], j) < minDist) 
+              minDist = distances.at<int>(selectedMarkers[k], j);
           // 		    cout<<"j="<<j<<" "<<distSum<<"|"<<flush;
           if (minDist>shorterDist){ 
             shorterDist=minDist;
@@ -174,11 +177,11 @@ int main(int argc,char **argv)
 
     sort(selectedMarkers.begin(),selectedMarkers.end());
     for(size_t i=0;i<selectedMarkers.size();i++){
-      char name[1024];
+      char name[MAX_ID];
       sprintf(name,"%s%d.png",argv[2],selectedMarkers[i]);
       // 	  cout<<"name="<<name<<endl;
       cout<<selectedMarkers[i]<<" "<<flush;
-      Mat markerImage=aruco::FiducialMarkers::createMarkerImage(selectedMarkers[i],atoi(argv[3]));
+      Mat markerImage=aruco::FiducialMarkers::createMarkerImage(selectedMarkers[i],atoi(argv[3]), GSIZE);
       imwrite(name,markerImage);
     }
     cout<<endl;
@@ -187,18 +190,13 @@ int main(int argc,char **argv)
     for(size_t i=0;i<selectedMarkers.size()-1;i++)
       for(size_t j=i+1;j<selectedMarkers.size();j++){
         // 	    cout<<" d=" << selectedMarkers[i]<<" "<<selectedMarkers[j]<<"->"<<distances.at<int> ( selectedMarkers[i], selectedMarkers[j])<<endl;
-        if (distances.at<int> ( selectedMarkers[i], selectedMarkers[j]) < minDist) minDist=distances.at<int> ( selectedMarkers[i], selectedMarkers[j]);
-
+        if (distances.at<int>(selectedMarkers[i], selectedMarkers[j]) < minDist) 
+          minDist = distances.at<int>(selectedMarkers[i], selectedMarkers[j]);
       }
-
-
     cout<<"Min Dist="<<minDist<<endl;
-
   }
-  catch (std::exception &ex)
-  {
+  catch (std::exception &ex) {
     cout<<ex.what()<<endl;
   }
-
 }
 

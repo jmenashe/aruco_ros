@@ -46,22 +46,36 @@ namespace aruco {
     Mat marker(size,size, CV_8UC1);
     marker.setTo(Scalar(0));
     int bsize = gsize + 2;
-    if (0<=id && id<1024) {
-      //for each line, create
-      int swidth=size/bsize;
-      int ids[4]={0x10,0x17,0x09,0x0e};
-      for (int y=0;y<gsize;y++) {
-        int index=(id>>2*(gsize-1-y)) & 0x0003;
-        int val=ids[index];
-        for (int x=0;x<gsize;x++) {
-          Mat roi=marker(Rect((x+1)* swidth,(y+1)* swidth,swidth,swidth));
-          if ( ( val>>(gsize-1-x) ) & 0x0001 ) roi.setTo(Scalar(255));
-          else roi.setTo(Scalar(0));
+    if(gsize == 5) {
+      if (0<=id && id<1024) {
+        //for each line, create
+        int swidth=size/bsize;
+        int ids[4]={0x10,0x17,0x09,0x0e};
+        for (int y=0;y<gsize;y++) {
+          int index=(id>>2*(gsize-1-y)) & 0x0003;
+          int val=ids[index];
+          for (int x=0;x<gsize;x++) {
+            Mat roi=marker(Rect((x+1)* swidth,(y+1)* swidth,swidth,swidth));
+            if ( ( val>>(gsize-1-x) ) & 0x0001 ) roi.setTo(Scalar(255));
+            else roi.setTo(Scalar(0));
+          }
         }
       }
+      else  throw cv::Exception(9189,"Invalid marker id","aruco::fiducial::createMarkerImage",__FILE__,__LINE__);
+    } else {
+      int swidth = size/bsize;
+      if(id < (1 << gsize * gsize)) {
+        for(int y = 0; y < gsize; y++) {
+          for(int x = 0; x < gsize; x++) {
+            int pos = y * gsize + x;
+            int val = (1 << pos) & id;
+            Mat roi = marker(Rect((x+1) * swidth, (y+1) * swidth, swidth, swidth));
+            if(val) roi.setTo(Scalar(255));
+            else roi.setTo(Scalar(0));
+          }
+        }
+      } else throw cv::Exception(9189,"Invalid marker id","aruco::fiducial::createMarkerImage",__FILE__,__LINE__);
     }
-    else  throw cv::Exception(9004,"id invalid","createMarker",__FILE__,__LINE__);
-
     return marker;
   }
   /**
@@ -71,19 +85,30 @@ namespace aruco {
   {
     Mat marker(gsize,gsize, CV_8UC1);
     marker.setTo(Scalar(0));
-    if (0<=id && id<1024) {
-      //for each line, create
-      int ids[4]={0x10,0x17,0x09,0x0e};
-      for (int y=0;y<gsize;y++) {
-        int index=(id>>2*(gsize-1-y)) & 0x0003;
-        int val=ids[index];
-        for (int x=0;x<gsize;x++) {
-          if ( ( val>>(gsize-1-x) ) & 0x0001 ) marker.at<uchar>(y,x)=1;
-          else marker.at<uchar>(y,x)=0;
+    if(gsize == 5) {
+      if (0<=id && id<1024) {
+        //for each line, create
+        int ids[4]={0x10,0x17,0x09,0x0e};
+        for (int y=0;y<gsize;y++) {
+          int index=(id>>2*(gsize-1-y)) & 0x0003;
+          int val=ids[index];
+          for (int x=0;x<gsize;x++) {
+            if ( ( val>>(gsize-1-x) ) & 0x0001 ) marker.at<uchar>(y,x)=1;
+            else marker.at<uchar>(y,x)=0;
+          }
         }
-      }
+      } else throw cv::Exception (9189,"Invalid marker id","aruco::fiducidal::getMarkerMat",__FILE__,__LINE__);
+    } else {
+      if(id < (1 << gsize * gsize)) {
+        for(int y = 0; y < gsize; y++) {
+          for(int x = 0; x < gsize; x++) {
+            int pos = y * gsize + x;
+            int val = (1 << pos) & id;
+            marker.at<uchar>(y,x) = val;
+          }
+        }
+      } else throw cv::Exception(9189,"Invalid marker id","aruco::fiducial::getMarkerMat",__FILE__,__LINE__);
     }
-    else throw cv::Exception (9189,"Invalid marker id","aruco::fiducidal::createMarkerMat",__FILE__,__LINE__);
     return marker;
   }
   /************************************
@@ -259,7 +284,18 @@ namespace aruco {
     }
     return out;
   }
-
+  /************************************
+ *
+ *
+ *
+ *
+ ************************************/
+  //http://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+  int32_t HammingWeight(int32_t i) {
+     i = i - ((i >> 1) & 0x55555555);
+     i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+     return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+  }
 
   /************************************
  *
@@ -267,45 +303,43 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducialMarkers::hammDistMarker(Mat  bits, int gsize)
-  {
-    int ids[4][5]=
-    {
-      {
-        1,0,0,0,0
-      }
-      ,
-      {
-        1,0,1,1,1
-      }
-      ,
-      {
-        0,1,0,0,1
-      }
-      ,
-      {
-        0, 1, 1, 1, 0
-      }
-    };
-    int dist=0;
+  int FiducialMarkers::hammDistMarker(Mat  bits, int gsize) {
+    if(gsize == 3) {
+      int n = 0;
+      for(int y = 0; y < gsize; y++)
+        for(int x = 0; x < gsize; x++)
+          if(bits.at<uchar>(y,x) == 1)
+            n += (1 << y * gsize + x);
 
-    for (int y=0;y<gsize;y++)
-    {
-      int minSum=1e5;
-      //hamming distance to each possible word
-      for (int p=0;p<4;p++)
-      {
-        int sum=0;
-        //now, count
-        for (int x=0;x<gsize;x++)
-          sum+=  bits.at<uchar>(y,x) == ids[p][x]?0:1;
-        if (minSum>sum) minSum=sum;
+      int markers[10] = {2,25,47,69,94,115,140,151,186,203};
+      int minDist = -1;
+      for(int i = 0; i < 10; i++) {
+        int32_t dist = HammingWeight(markers[i] ^ n);
+        if(minDist == -1 || dist < minDist)
+          minDist = dist;
       }
-      //do the and
-      dist+=minSum;
-    }
-
-    return dist;
+      return minDist;
+    } else if(gsize == 5) {
+      int ids[4][5]= {{1,0,0,0,0},
+                      {1,0,1,1,1},
+                      {0,1,0,0,1},
+                      {0,1,1,1,0}};
+      int dist=0;
+      for (int y=0;y<gsize;y++) {
+        int minSum=1e5;
+        //hamming distance to each possible word
+        for (int p=0;p<4;p++) {
+          int sum=0;
+          //now, count
+          for (int x=0;x<gsize;x++)
+            sum+=  bits.at<uchar>(y,x) == ids[p][x]?0:1;
+          if (minSum>sum) minSum=sum;
+        }
+        //do the and
+        dist+=minSum;
+      }
+      return dist;
+    } else throw cv::Exception(9190,"Invalid marker grid size","aruco::fiducial::hammDistMarker",__FILE__,__LINE__);
   }
 
   /************************************
