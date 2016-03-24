@@ -304,16 +304,18 @@ namespace aruco {
  *
  ************************************/
   int FiducialMarkers::hammDistMarker(Mat  bits, int gsize) {
-    if(gsize == 3) {
+    std::vector<int> markers;
+    // For other sizes just figure out a marker id dictionary and fill in the vector
+    if(gsize == 3) markers = {2,31,69,107,118,167,186,206,211,253};
+    if(markers.size() > 0) {
       int n = 0;
       for(int y = 0; y < gsize; y++)
         for(int x = 0; x < gsize; x++)
           if(bits.at<uchar>(y,x) == 1)
             n += (1 << y * gsize + x);
 
-      int markers[10] = {2,25,47,69,94,115,140,151,186,203};
       int minDist = -1;
-      for(int i = 0; i < 10; i++) {
+      for(int i = 0; i < markers.size(); i++) {
         int32_t dist = HammingWeight(markers[i] ^ n);
         if(minDist == -1 || dist < minDist)
           minDist = dist;

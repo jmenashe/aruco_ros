@@ -10,6 +10,8 @@ catkin_package(
   LIBRARIES aruco
 )
 
+set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS}")
+
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
