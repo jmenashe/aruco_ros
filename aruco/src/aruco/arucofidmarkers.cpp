@@ -43,39 +43,14 @@ namespace aruco {
 */
   Mat FiducialMarkers::createMarkerImage(int id,int size,int gsize) throw (cv::Exception)
   {
-    Mat marker(size,size, CV_8UC1);
-    marker.setTo(Scalar(0));
-    int bsize = gsize + 2;
-    if(gsize == 5) {
-      if (0<=id && id<1024) {
-        //for each line, create
-        int swidth=size/bsize;
-        int ids[4]={0x10,0x17,0x09,0x0e};
-        for (int y=0;y<gsize;y++) {
-          int index=(id>>2*(gsize-1-y)) & 0x0003;
-          int val=ids[index];
-          for (int x=0;x<gsize;x++) {
-            Mat roi=marker(Rect((x+1)* swidth,(y+1)* swidth,swidth,swidth));
-            if ( ( val>>(gsize-1-x) ) & 0x0001 ) roi.setTo(Scalar(255));
-            else roi.setTo(Scalar(0));
-          }
-        }
+    Mat marker(size,size, CV_8UC1, Scalar(0));
+    Mat m = getMarkerMat(id, gsize);
+    for(int y = 0; y < m.rows; y++)
+      for(int x = 0; x < m.cols; x++) {
+        int swidth = size / (gsize + 2);
+        Mat roi = marker(Rect((x+1)*swidth,(y+1)*swidth,swidth,swidth));
+        if(m.at<uchar>(y,x) == 1) roi.setTo(255);
       }
-      else  throw cv::Exception(9189,"Invalid marker id","aruco::fiducial::createMarkerImage",__FILE__,__LINE__);
-    } else {
-      int swidth = size/bsize;
-      if(id < (1 << gsize * gsize)) {
-        for(int y = 0; y < gsize; y++) {
-          for(int x = 0; x < gsize; x++) {
-            int pos = y * gsize + x;
-            int val = (1 << pos) & id;
-            Mat roi = marker(Rect((x+1) * swidth, (y+1) * swidth, swidth, swidth));
-            if(val) roi.setTo(Scalar(255));
-            else roi.setTo(Scalar(0));
-          }
-        }
-      } else throw cv::Exception(9189,"Invalid marker id","aruco::fiducial::createMarkerImage",__FILE__,__LINE__);
-    }
     return marker;
   }
   /**
@@ -83,8 +58,7 @@ namespace aruco {
  */
   cv::Mat FiducialMarkers::getMarkerMat(int id,int gsize) throw (cv::Exception)
   {
-    Mat marker(gsize,gsize, CV_8UC1);
-    marker.setTo(Scalar(0));
+    Mat marker(gsize,gsize, CV_8UC1, Scalar(0));
     if(gsize == 5) {
       if (0<=id && id<1024) {
         //for each line, create
@@ -104,6 +78,7 @@ namespace aruco {
           for(int x = 0; x < gsize; x++) {
             int pos = y * gsize + x;
             int val = (1 << pos) & id;
+            val = val ? 1 : 0;
             marker.at<uchar>(y,x) = val;
           }
         }
@@ -303,7 +278,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducialMarkers::hammDistMarker(Mat  bits, int gsize) {
+  FiducialMarkers::MDR FiducialMarkers::hammDistMarker(Mat  bits, int gsize) {
     std::vector<int> markers;
     // For other sizes just figure out a marker id dictionary and fill in the vector
     if(gsize == 3) markers = {2,31,69,107,118,167,186,206,211,253};
@@ -315,12 +290,15 @@ namespace aruco {
             n += (1 << y * gsize + x);
 
       int minDist = -1;
+      MDR mdr;
       for(int i = 0; i < markers.size(); i++) {
         int32_t dist = HammingWeight(markers[i] ^ n);
-        if(minDist == -1 || dist < minDist)
-          minDist = dist;
+        if(mdr.marker == -1 || dist < mdr.dist) {
+          mdr.marker = markers[i];
+          mdr.dist = dist;
+        }
       }
-      return minDist;
+      return mdr;
     } else if(gsize == 5) {
       int ids[4][5]= {{1,0,0,0,0},
                       {1,0,1,1,1},
@@ -340,7 +318,9 @@ namespace aruco {
         //do the and
         dist+=minSum;
       }
-      return dist;
+      MDR ret;
+      ret.dist = dist;
+      return ret;
     } else throw cv::Exception(9190,"Invalid marker grid size","aruco::fiducial::hammDistMarker",__FILE__,__LINE__);
   }
 
@@ -398,30 +378,30 @@ namespace aruco {
     Mat _bitsFlip;
     Mat Rotations[4];
     Rotations[0]=_bits;
+    MDR mdrs[4];
     int dists[4];
-    dists[0]=hammDistMarker( Rotations[0]) ;
-    pair<int,int> minDist( dists[0],0);
-    for (int i=1;i<4;i++)
-    {
+    mdrs[0] = hammDistMarker(Rotations[0], gsize);
+    MDR minimum = mdrs[0]; 
+    minimum.rotation = 0;
+    for (int i=1;i<4;i++) {
       //rotate
-      Rotations[i]=rotate(Rotations[i-1]);
+      Rotations[i] = rotate(Rotations[i-1]);
       //get the hamming distance to the nearest possible word
-      dists[i]=hammDistMarker( Rotations[i]) ;
-      if (dists[i]<minDist.first)
-      {
-        minDist.first=  dists[i];
-        minDist.second=i;
+      mdrs[i] = hammDistMarker(Rotations[i], gsize);
+      if(mdrs[i].dist < minimum.dist) {
+        minimum = mdrs[i];
+        minimum.rotation = i;
       }
     }
-    // 		        printMat<uchar>( Rotations [ minDist.second]);
-    // 		 	cout<<"MinDist="<<minDist.first<<" "<<minDist.second<<endl;
+    nRotations = minimum.rotation;
+    if(minimum.dist > 0 && gsize == 5) return -1;
+    // 3 is the minimum pairwise distance for the optimal 
+    // marker configuration on gsize = 3, n markers = 10
+    if(minimum.dist >= 3) return -1; 
 
-    nRotations=minDist.second;
-    if (minDist.first!=0)	 //FUTURE WORK: correct if any error
-      return -1;
-    else {//Get id of the marker
+    cv::Mat bits = Rotations[minimum.rotation];
+    if(gsize == 5) {//Get id of the marker
       int MatID=0;
-      cv::Mat bits=Rotations [ minDist.second];
       for (int y=0;y<gsize;y++)
       {
         MatID<<=1;
@@ -430,6 +410,8 @@ namespace aruco {
         if ( bits.at<uchar>(y,3)) MatID|=1;
       }
       return MatID;
+    } else {
+      return minimum.marker;
     }
   }
 

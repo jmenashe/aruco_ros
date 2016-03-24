@@ -131,14 +131,17 @@ int main(int argc,char **argv)
     int nMarkers=atoi(argv[1]);
     //select the first marker
     vector<bool> usedMarkers(MAX_ID,false);
-
-
+    for(int i = 0; i < MAX_ID; i++)
+      if(aruco::HammingWeight(i) <= 1) 
+        usedMarkers[i] = true;
 
     vector<int> selectedMarkers;
     //select the masker with higher entropy first
-    int bestEntr=0;
-    for(size_t i=0;i<ventropy.size();i++)
+    int bestEntr = 0b11; // first marker with hamming weight > 1
+    for(size_t i=0;i<ventropy.size();i++) {
+      if(aruco::HammingWeight(i) <= 1) continue;
       if (ventropy[i]>ventropy[bestEntr]) bestEntr=i;
+    }
     selectedMarkers.push_back(bestEntr);
     usedMarkers[bestEntr]=true;
 

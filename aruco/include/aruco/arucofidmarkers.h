@@ -33,6 +33,7 @@ or implied, of Rafael Muñoz Salinas.
 #include <aruco/marker.h>
 #include <aruco/board.h>
 namespace aruco {
+    int32_t HammingWeight(int32_t i);
 
 class ARUCO_EXPORTS FiducialMarkers {
 public:
@@ -105,11 +106,18 @@ public:
      */
     static  cv::Mat  createBoardImage_Frame( cv::Size gridSize,int MarkerSize,int MarkerDistance,  BoardConfiguration& TInfo ,bool setDataCentered=true,vector<int> *excludedIds=NULL ) throw (cv::Exception);
 
+    struct MDR {
+      int marker;
+      int dist;
+      int rotation;
+      MDR(int marker=-1, int dist=-1, int rotation=-1) : marker(marker), dist(dist), rotation(rotation) { }
+    };
+
 private:
   
     static vector<int> getListOfValidMarkersIds_random(int nMarkers,vector<int> *excluded) throw (cv::Exception);
     static  cv::Mat rotate(const cv::Mat & in);
-    static  int hammDistMarker(cv::Mat  bits, int gsize=5);
+    static  MDR hammDistMarker(cv::Mat  bits, int gsize=5);
     static  int analyzeMarkerImage(cv::Mat &grey,int &nRotations, int gsize=5);
 };
 
