@@ -102,7 +102,9 @@ int main(int argc,char **argv)
 {
   try {
     int GSIZE = 3;
-    int MAX_ID = min(1024, 1 << GSIZE * GSIZE);
+    int MAX_ID = 1 << GSIZE * GSIZE;
+    if(GSIZE == 5) MAX_ID = 1024;
+    MAX_ID = min(1 << 16, MAX_ID);
     if (argc<4) {
 
       //You can also use ids 2000-2007 but it is not safe since there are a lot of false positives.
