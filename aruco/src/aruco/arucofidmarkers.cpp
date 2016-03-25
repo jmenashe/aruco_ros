@@ -29,6 +29,7 @@ or implied, of Rafael Muñoz Salinas.
 */
 #include <aruco/arucofidmarkers.h>
 #include <opencv2/imgproc/imgproc.hpp>
+#define DEBUG_ARUCO false
 using namespace cv;
 using namespace std;
 namespace aruco {
@@ -281,7 +282,7 @@ namespace aruco {
   FiducialMarkers::MDR FiducialMarkers::hammDistMarker(Mat  bits, int gsize) {
     std::vector<int> markers;
     // For other sizes just figure out a marker id dictionary and fill in the vector
-    if(gsize == 3) markers = {2,31,69,107,118,167,186,206,211,253};
+    if(gsize == 3) markers = {3,10,13,23,30,49,85,123,170,367};
     if(markers.size() > 0) {
       int n = 0;
       for(int y = 0; y < gsize; y++)
@@ -293,6 +294,7 @@ namespace aruco {
       MDR mdr;
       for(int i = 0; i < markers.size(); i++) {
         int32_t dist = HammingWeight(markers[i] ^ n);
+        if(DEBUG_ARUCO) printf("n: %i, markers[%i]: %i, dist: %i\n", n, i, markers[i], dist);
         if(mdr.marker == -1 || dist < mdr.dist) {
           mdr.marker = markers[i];
           mdr.dist = dist;
@@ -348,7 +350,8 @@ namespace aruco {
         int Ystart=(y)*(swidth);
         Mat square=grey(Rect(Xstart,Ystart,swidth,swidth));
         int nZ=countNonZero(square);
-        if (nZ> (swidth*swidth) /2) {
+        if (nZ > swidth*swidth/2) {
+          if(DEBUG_ARUCO) printf("no black border: nZ: %i, swidth: %i, swidth*swidth/2: %i\n", nZ, swidth, swidth*swidth/2);
           // 		cout<<"neb"<<endl;
           return -1;//can not be a marker because the border element is not black!
         }
@@ -377,6 +380,11 @@ namespace aruco {
     //checkl all possible rotations
     Mat _bitsFlip;
     Mat Rotations[4];
+    if(DEBUG_ARUCO) printf("canonical:\n\t%i,%i,%i\n\t%i,%i,%i\n\t%i,%i,%i\n\n", 
+        _bits.at<uchar>(0,0), _bits.at<uchar>(0,1), _bits.at<uchar>(0,2), 
+        _bits.at<uchar>(1,0), _bits.at<uchar>(1,1), _bits.at<uchar>(1,2), 
+        _bits.at<uchar>(2,0), _bits.at<uchar>(2,1), _bits.at<uchar>(2,2)
+    );
     Rotations[0]=_bits;
     MDR mdrs[4];
     int dists[4];
@@ -394,10 +402,11 @@ namespace aruco {
       }
     }
     nRotations = minimum.rotation;
+    if(DEBUG_ARUCO) printf("minimum marker: %i, dist: %i, rotation: %i\n", minimum.marker, minimum.dist, minimum.rotation);
     if(minimum.dist > 0 && gsize == 5) return -1;
-    // 3 is the minimum pairwise distance for the optimal 
+    // 2 is the minimum pairwise distance for the optimal 
     // marker configuration on gsize = 3, n markers = 10
-    if(minimum.dist >= 3) return -1; 
+    if(minimum.dist >= 4) return -1; 
 
     cv::Mat bits = Rotations[minimum.rotation];
     if(gsize == 5) {//Get id of the marker
@@ -422,7 +431,7 @@ namespace aruco {
  *
  *
  ************************************/
-  int FiducialMarkers::detect(const Mat &in,int &nRotations)
+  int FiducialMarkers::detect(const Mat &in,int &nRotations, int gsize)
   {
     assert(in.rows==in.cols);
     Mat grey;
@@ -434,7 +443,7 @@ namespace aruco {
     //now, analyze the interior in order to get the id
     //try first with the big ones
 
-    return analyzeMarkerImage(grey,nRotations);;
+    return analyzeMarkerImage(grey,nRotations,gsize);
     //too many false positives
     /*    int id=analyzeMarkerImage(grey,nRotations);
         if (id!=-1) return id;

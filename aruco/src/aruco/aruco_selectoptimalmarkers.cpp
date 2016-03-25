@@ -40,18 +40,16 @@
 using namespace cv;
 using namespace std;
 
-int HammDist_(const cv::Mat &m1,const cv::Mat & m2, int gsize)
-{
+int HammDist_(const cv::Mat &m1,const cv::Mat & m2) {
 
   int dist=0;
-  for (int y=0;y<gsize;y++)
-    for (int x=0;x<gsize;x++)
+  for (int y=0;y<m1.rows;y++)
+    for (int x=0;x<m1.cols;x++)
       if (m1.at<uchar>(y,x)!=m2.at<uchar>(y,x)) dist++;
   return dist;
 
 }
-Mat rotate(Mat  in)
-{
+Mat rotate(Mat  in) {
   Mat out;
   in.copyTo(out);
   for (int i=0;i<in.rows;i++)
@@ -64,18 +62,25 @@ Mat rotate(Mat  in)
   return out;
 }
 
+bool hasRadialSymmetry(const cv::Mat& m) {
+  cv::Mat mc = m.clone();
+  for(int i = 0; i < 3; i++) {
+    mc = rotate(mc);
+    int dist = HammDist_(m, mc);
+    if(dist == 0) return true;
+  }
+  return false;
+}
 
-int HammDist(const cv::Mat &m1,const cv::Mat & m2, int gsize)
-{
+int HammDist(const cv::Mat &m1,const cv::Mat & m2) {
   cv::Mat mc=m1.clone();
   int minD=std::numeric_limits<int>::max();
   for(int i=0;i<4;i++){
-    int dist=HammDist_(mc,m2,gsize);
+    int dist=HammDist_(mc,m2);
     if( dist<minD) minD=dist;
     mc= rotate(mc);
   }
   return minD;
-
 }
 
 int entropy(const cv::Mat &marker, int gsize)
@@ -127,15 +132,18 @@ int main(int argc,char **argv)
     cv::Mat distances=cv::Mat::zeros(MAX_ID,MAX_ID,CV_32SC1);
     for (int i=0;i<MAX_ID;i++)
       for (int j=i+1;j<MAX_ID;j++)
-        distances.at<int>(i,j)=distances.at<int>(j,i) = HammDist(markers[i], markers[j], GSIZE);
+        distances.at<int>(i,j)=distances.at<int>(j,i) = HammDist(markers[i], markers[j]);
     cout<<"done"<<endl;
     //
     int nMarkers=atoi(argv[1]);
     //select the first marker
     vector<bool> usedMarkers(MAX_ID,false);
-    for(int i = 0; i < MAX_ID; i++)
+    for(int i = 0; i < MAX_ID; i++) {
       if(aruco::HammingWeight(i) <= 1) 
         usedMarkers[i] = true;
+      if(hasRadialSymmetry(markers[i]))
+        usedMarkers[i] = true;
+    }
 
     vector<int> selectedMarkers;
     //select the masker with higher entropy first
@@ -185,7 +193,7 @@ int main(int argc,char **argv)
       char name[MAX_ID];
       sprintf(name,"%s%d.png",argv[2],selectedMarkers[i]);
       // 	  cout<<"name="<<name<<endl;
-      cout<<selectedMarkers[i]<<" "<<flush;
+      cout<<selectedMarkers[i]<<","<<flush;
       Mat markerImage=aruco::FiducialMarkers::createMarkerImage(selectedMarkers[i],atoi(argv[3]), GSIZE);
       imwrite(name,markerImage);
     }

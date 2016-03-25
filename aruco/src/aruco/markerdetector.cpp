@@ -52,7 +52,6 @@ namespace aruco
     _cornerMethod=LINES;
     _markerWarpSize=56;
     _speed=0;
-    markerIdDetector_ptrfunc=aruco::FiducialMarkers::detect;
     pyrdown_level=0; // no image reduction
     _minSize=0.04;
     _maxSize=0.5;
@@ -194,7 +193,7 @@ namespace aruco
       else  resW=warp ( grey,canonicalMarker,Size ( _markerWarpSize,_markerWarpSize ),MarkerCanditates[i] );
       if (resW) {
         int nRotations;
-        int id= ( *markerIdDetector_ptrfunc ) ( canonicalMarker,nRotations );
+        int id = aruco::FiducialMarkers::detect(canonicalMarker, nRotations, 3);
         if ( id!=-1 )
         {
           if(_cornerMethod==LINES) refineCandidateLines( MarkerCanditates[i] ); // make LINES refinement before lose contour points

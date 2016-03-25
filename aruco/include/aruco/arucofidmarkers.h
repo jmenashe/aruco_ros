@@ -70,7 +70,7 @@ public:
      * @param nRotations number of 90deg rotations in clockwise direction needed to set the marker in correct position
      * @return -1 if the image passed is a not a valid marker, and its id in case it really is a marker
      */
-    static int detect(const cv::Mat &in,int &nRotations);
+    static int detect(const cv::Mat &in,int &nRotations, int gsize=5);
 
     /**Similar to createMarkerImage. Instead of returning a visible image, returns a 8UC1 matrix of 0s and 1s with the marker info
      */
